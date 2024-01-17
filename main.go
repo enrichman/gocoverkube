@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	pvcName    = "gocoverkube-pvc"
 	volumeName = "gocoverkube-tmp-coverage"
 	mountPath  = "/tmp/coverage"
 )

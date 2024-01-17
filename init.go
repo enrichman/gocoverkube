@@ -29,12 +29,12 @@ func Init(ctx context.Context, clientset kubernetes.Interface, namespace, deploy
 	}
 
 	pvcClient := clientset.CoreV1().PersistentVolumeClaims(namespace)
-	pvc, err := claimPersistentVolume(ctx, pvcClient, storageClass)
+	err = claimPersistentVolume(ctx, pvcClient, storageClass)
 	if err != nil {
 		return err
 	}
 
-	err = patchDeployment(ctx, deploymentClient, deployment, pvc)
+	err = patchDeployment(ctx, deploymentClient, deployment)
 	if err != nil {
 		return err
 	}
@@ -62,10 +62,10 @@ func getDefaultStorageClass(ctx context.Context, clientset kubernetes.Interface)
 }
 
 // claimPersistentVolume
-func claimPersistentVolume(ctx context.Context, pvcClient typedcorev1.PersistentVolumeClaimInterface, storageClass string) (string, error) {
+func claimPersistentVolume(ctx context.Context, pvcClient typedcorev1.PersistentVolumeClaimInterface, storageClass string) error {
 	pvc := &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gocoverkube",
+			Name: pvcName,
 			Labels: map[string]string{
 				"app.kubernetes.io/managed-by": "gocoverkube",
 			},
@@ -86,15 +86,15 @@ func claimPersistentVolume(ctx context.Context, pvcClient typedcorev1.Persistent
 	_, err := pvcClient.Create(ctx, pvc, metav1.CreateOptions{})
 	if err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
-			return "", err
+			return err
 		}
 		fmt.Println(err)
 	}
 
-	return pvc.Name, nil
+	return nil
 }
 
-func patchDeployment(ctx context.Context, deploymentClient typedappsv1.DeploymentInterface, deployment *appsv1.Deployment, pvc string) error {
+func patchDeployment(ctx context.Context, deploymentClient typedappsv1.DeploymentInterface, deployment *appsv1.Deployment) error {
 	// update deployment
 	podSpec := deployment.Spec.Template.Spec
 
@@ -106,7 +106,7 @@ func patchDeployment(ctx context.Context, deploymentClient typedappsv1.Deploymen
 	podSpec.Containers[0] = container
 
 	// bind /tmp/coverage volume to PVC
-	podSpec.Volumes = setVolume(podSpec.Volumes, pvc)
+	podSpec.Volumes = setVolume(podSpec.Volumes)
 	deployment.Spec.Template.Spec = podSpec
 
 	fmt.Println(deployment.ResourceVersion)
@@ -142,7 +142,7 @@ func setVolumeMount(volumeMounts []v1.VolumeMount) []v1.VolumeMount {
 	})
 }
 
-func setVolume(volumes []v1.Volume, pvc string) []v1.Volume {
+func setVolume(volumes []v1.Volume) []v1.Volume {
 	for _, v := range volumes {
 		if v.Name == volumeName {
 			return volumes
@@ -155,7 +155,7 @@ func setVolume(volumes []v1.Volume, pvc string) []v1.Volume {
 			Name: volumeName,
 			VolumeSource: v1.VolumeSource{
 				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-					ClaimName: pvc,
+					ClaimName: pvcName,
 				},
 			},
 		},
