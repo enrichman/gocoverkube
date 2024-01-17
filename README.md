@@ -1,1 +1,1 @@
-# gokollector
+# gocoverkube
