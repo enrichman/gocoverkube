@@ -1,9 +1,11 @@
-package main
+package cli
 
 import (
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	gcmd "github.com/enrichman/gocoverkube/internal/cmd"
 )
 
 func NewRootCmd(clientset kubernetes.Interface, config *rest.Config) *cobra.Command {
@@ -25,16 +27,14 @@ func NewInitCmd(clientset kubernetes.Interface) *cobra.Command {
 	var namespace string
 
 	initCmd := &cobra.Command{
-		Use:   "init",
-		Short: "init",
-		Args:  cobra.ExactArgs(1),
+		Use:     "init",
+		Short:   "init",
+		Args:    cobra.ExactArgs(1),
+		PreRunE: CheckConnectionPreRun(clientset),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkConnection(clientset); err != nil {
-				return err
-			}
-
 			deploymentName := args[0]
-			return Init(cmd.Context(), clientset, namespace, deploymentName)
+
+			return gcmd.Init(cmd.Context(), clientset, namespace, deploymentName)
 		},
 	}
 
@@ -47,17 +47,14 @@ func NewCollectCmd(clientset kubernetes.Interface, config *rest.Config) *cobra.C
 	var namespace string
 
 	initCmd := &cobra.Command{
-		Use:   "collect",
-		Short: "collect",
-		Args:  cobra.ExactArgs(1),
+		Use:     "collect",
+		Short:   "collect",
+		Args:    cobra.ExactArgs(1),
+		PreRunE: CheckConnectionPreRun(clientset),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := checkConnection(clientset)
-			if err != nil {
-				return err
-			}
-
 			deploymentName := args[0]
-			return Collect(cmd.Context(), clientset, config, namespace, deploymentName)
+
+			return gcmd.Collect(cmd.Context(), clientset, config, namespace, deploymentName)
 		},
 	}
 
@@ -70,21 +67,25 @@ func NewClearCmd(clientset kubernetes.Interface) *cobra.Command {
 	var namespace string
 
 	initCmd := &cobra.Command{
-		Use:   "clear",
-		Short: "clear",
-		Args:  cobra.ExactArgs(1),
+		Use:     "clear",
+		Short:   "clear",
+		Args:    cobra.ExactArgs(1),
+		PreRunE: CheckConnectionPreRun(clientset),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := checkConnection(clientset)
-			if err != nil {
-				return err
-			}
-
 			deploymentName := args[0]
-			return Clear(cmd.Context(), clientset, namespace, deploymentName)
+
+			return gcmd.Clear(cmd.Context(), clientset, namespace, deploymentName)
 		},
 	}
 
 	initCmd.Flags().StringVarP(&namespace, "namespace", "n", "default", "namespace")
 
 	return initCmd
+}
+
+func CheckConnectionPreRun(clientset kubernetes.Interface) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		_, err := gcmd.ServerVersion(clientset)
+		return err
+	}
 }

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gocoverkube-sample-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gocoverkube-sample-server
+  template:
+    metadata:
+      labels:
+        app: gocoverkube-sample-server
+    spec:
+      containers:
+      - image: "enrichman/gocoverkube-sample-server:dev"
+        name: gocoverkube-sample-server
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

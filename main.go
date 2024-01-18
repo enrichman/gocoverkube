@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/enrichman/gocoverkube/internal/cli"
+
 	"github.com/lmittmann/tint"
 	"k8s.io/client-go/kubernetes"
 
@@ -32,21 +34,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	rootCmd := NewRootCmd(clientset, config)
+	rootCmd := cli.NewRootCmd(clientset, config)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
 	logger.Info("done")
-}
-
-func checkConnection(clientset kubernetes.Interface) error {
-	version, err := clientset.Discovery().ServerVersion()
-	if err != nil {
-		return err
-	}
-	fmt.Println(version.Platform)
-
-	return nil
 }
