@@ -3,9 +3,10 @@ package main
 import (
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
-func NewRootCmd(clientset kubernetes.Interface) *cobra.Command {
+func NewRootCmd(clientset kubernetes.Interface, config *rest.Config) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "gocoverkube",
 		Short: "gocoverkube",
@@ -13,7 +14,7 @@ func NewRootCmd(clientset kubernetes.Interface) *cobra.Command {
 
 	rootCmd.AddCommand(
 		NewInitCmd(clientset),
-		NewCollectCmd(clientset),
+		NewCollectCmd(clientset, config),
 	)
 
 	return rootCmd
@@ -41,7 +42,7 @@ func NewInitCmd(clientset kubernetes.Interface) *cobra.Command {
 	return initCmd
 }
 
-func NewCollectCmd(clientset kubernetes.Interface) *cobra.Command {
+func NewCollectCmd(clientset kubernetes.Interface, config *rest.Config) *cobra.Command {
 	var namespace string
 
 	initCmd := &cobra.Command{
@@ -55,7 +56,7 @@ func NewCollectCmd(clientset kubernetes.Interface) *cobra.Command {
 			}
 
 			deploymentName := args[0]
-			return Collect(cmd.Context(), clientset, namespace, deploymentName)
+			return Collect(cmd.Context(), clientset, config, namespace, deploymentName)
 		},
 	}
 

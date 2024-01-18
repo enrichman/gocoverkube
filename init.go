@@ -15,6 +15,12 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+const (
+	pvcName    = "gocoverkube-pvc"
+	volumeName = "gocoverkube-tmp-coverage"
+	mountPath  = "/tmp/coverage"
+)
+
 // gocoverkube init
 func Init(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string) error {
 	storageClass, err := getDefaultStorageClass(ctx, clientset)
