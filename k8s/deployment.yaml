@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debian-slim
+  namespace: foo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: debian-slim
+  template:
+    metadata:
+      labels:
+        app: debian-slim
+    spec:
+      containers:
+      - image: debian:stable-slim
+        name: debian
+        command: [ "/bin/bash", "-c", "--" ]
+        args: [ "while true; do sleep 30; done;" ]
+      #   volumeMounts:
+      #   - mountPath: /tmp/coverage
+      #     name: tmp-coverage
+      # volumes:
+      # - name: tmp-coverage
+      #   persistentVolumeClaim:
+      #     claimName: pvc-foo

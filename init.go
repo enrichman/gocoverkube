@@ -75,7 +75,7 @@ func claimPersistentVolume(ctx context.Context, pvcClient typedcorev1.Persistent
 				v1.ReadWriteOnce,
 			},
 			StorageClassName: &storageClass,
-			Resources: v1.VolumeResourceRequirements{
+			Resources: v1.ResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceStorage: resource.MustParse("100M"),
 				},
