@@ -15,6 +15,7 @@ func NewRootCmd(clientset kubernetes.Interface, config *rest.Config) *cobra.Comm
 	rootCmd.AddCommand(
 		NewInitCmd(clientset),
 		NewCollectCmd(clientset, config),
+		NewClearCmd(clientset),
 	)
 
 	return rootCmd
@@ -57,6 +58,29 @@ func NewCollectCmd(clientset kubernetes.Interface, config *rest.Config) *cobra.C
 
 			deploymentName := args[0]
 			return Collect(cmd.Context(), clientset, config, namespace, deploymentName)
+		},
+	}
+
+	initCmd.Flags().StringVarP(&namespace, "namespace", "n", "default", "namespace")
+
+	return initCmd
+}
+
+func NewClearCmd(clientset kubernetes.Interface) *cobra.Command {
+	var namespace string
+
+	initCmd := &cobra.Command{
+		Use:   "clear",
+		Short: "clear",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := checkConnection(clientset)
+			if err != nil {
+				return err
+			}
+
+			deploymentName := args[0]
+			return Clear(cmd.Context(), clientset, namespace, deploymentName)
 		},
 	}
 

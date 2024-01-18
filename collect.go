@@ -17,6 +17,10 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 )
 
+const (
+	collectorName = "gocoverkube-collector"
+)
+
 // gocoverkube collect
 func Collect(ctx context.Context, clientset kubernetes.Interface, config *rest.Config, namespace, deploymentName string) error {
 	deploymentClient := clientset.AppsV1().Deployments(namespace)
@@ -26,8 +30,6 @@ func Collect(ctx context.Context, clientset kubernetes.Interface, config *rest.C
 	}
 
 	// TODO: restart deployment
-
-	collectorName := "gocoverkube-collector"
 
 	podClient := clientset.CoreV1().Pods(namespace)
 	_, err = podClient.Create(ctx, &v1.Pod{
