@@ -22,6 +22,9 @@ var Version = "0.0.0-dev"
 type RootCfg struct {
 	kubeconfig string
 	namespace  string
+
+	client *kubernetes.Clientset
+	config *rest.Config
 }
 
 func NewRootCmd() *cobra.Command {
@@ -34,7 +37,19 @@ func NewRootCmd() *cobra.Command {
 		Use:   "gocoverkube",
 		Short: "gocoverkube",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			return initializeConfig(cmd)
+			err := initializeConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			clientset, config, err := newKubernetesClient(rootCfg.kubeconfig)
+			if err != nil {
+				return err
+			}
+
+			rootCfg.client = clientset
+			rootCfg.config = config
+			return nil
 		},
 	}
 
@@ -59,14 +74,9 @@ func NewInitCmd(rootCfg *RootCfg) *cobra.Command {
 		Args:         cobra.ExactArgs(1),
 		PreRunE:      CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientset, _, err := newKubernetesClient(rootCfg.kubeconfig)
-			if err != nil {
-				return err
-			}
-
 			deploymentName := args[0]
 
-			return gcmd.Init(cmd.Context(), clientset, rootCfg.namespace, deploymentName)
+			return gcmd.Init(cmd.Context(), rootCfg.client, rootCfg.namespace, deploymentName)
 		},
 	}
 }
@@ -79,14 +89,9 @@ func NewCollectCmd(rootCfg *RootCfg) *cobra.Command {
 		Args:         cobra.ExactArgs(1),
 		PreRunE:      CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientset, config, err := newKubernetesClient(rootCfg.kubeconfig)
-			if err != nil {
-				return err
-			}
-
 			deploymentName := args[0]
 
-			return gcmd.Collect(cmd.Context(), clientset, config, rootCfg.namespace, deploymentName)
+			return gcmd.Collect(cmd.Context(), rootCfg.client, rootCfg.config, rootCfg.namespace, deploymentName)
 		},
 	}
 }
@@ -99,14 +104,9 @@ func NewClearCmd(rootCfg *RootCfg) *cobra.Command {
 		Args:         cobra.ExactArgs(1),
 		PreRunE:      CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientset, _, err := newKubernetesClient(rootCfg.kubeconfig)
-			if err != nil {
-				return err
-			}
-
 			deploymentName := args[0]
 
-			return gcmd.Clear(cmd.Context(), clientset, rootCfg.namespace, deploymentName)
+			return gcmd.Clear(cmd.Context(), rootCfg.client, rootCfg.namespace, deploymentName)
 		},
 	}
 }
@@ -124,12 +124,7 @@ func NewVersionCmd() *cobra.Command {
 
 func CheckConnectionPreRun(rootCfg *RootCfg) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		clientset, _, err := newKubernetesClient(rootCfg.kubeconfig)
-		if err != nil {
-			return err
-		}
-
-		_, err = gcmd.ServerVersion(clientset)
+		_, err := gcmd.ServerVersion(rootCfg.client)
 		return err
 	}
 }
