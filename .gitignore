@@ -21,3 +21,5 @@
 go.work
 
 coverage
+gocoverkube
+sample-server

@@ -115,10 +115,7 @@ func patchDeployment(ctx context.Context, deploymentClient typedappsv1.Deploymen
 	podSpec.Volumes = setVolume(podSpec.Volumes)
 	deployment.Spec.Template.Spec = podSpec
 
-	fmt.Println(deployment.ResourceVersion)
-	deployment, err := deploymentClient.Update(ctx, deployment, metav1.UpdateOptions{})
-	fmt.Println(deployment.ResourceVersion)
-
+	_, err := deploymentClient.Update(ctx, deployment, metav1.UpdateOptions{})
 	return err
 }
 

@@ -1,18 +1,21 @@
 
-dev-setup: dev-cluster-create dev-sample-server-build dev-sample-server-copy
+build:
+	CGO_ENABLED=0 go build github.com/enrichman/gocoverkube
+
+dev-setup: dev-cluster-create dev-sample-server-build dev-sample-server-deploy
 
 dev-cluster-create:
-	k3d registry create gocoverkube-registry.localhost
-	k3d cluster create gocoverkube --registry-use gocoverkube-registry.localhost
+	k3d cluster create gocoverkube
 	k3d kubeconfig merge -ad
+	kubectl config use-context k3d-gocoverkube
+
+dev-cluster-delete:
+	k3d cluster delete gocoverkube
 
 dev-sample-server-build:
-	CGO_ENABLED=0 go build -o sample-server -coverpkg=./... -cover ./tests/sample-server
-	docker build -t enrichman/gocoverkube-sample-server:dev -f tests/sample-server/Dockerfile .
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o sample-server -coverpkg=./... -cover ./tests/sample-server
+	docker build -t sample-server:local -f tests/sample-server/Dockerfile .
 
-dev-sample-server-copy:
-	k3d image import -c gocoverkube enrichman/gocoverkube-sample-server:dev
-
-dev-delete:
-	k3d cluster delete gocoverkube
-	k3d cluster delete --all
+dev-sample-server-deploy:
+	k3d image import -c gocoverkube sample-server:local
+	kubectl apply -f ./tests/sample-server/deployment.yaml

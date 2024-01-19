@@ -3,21 +3,17 @@ package main
 import (
 	"fmt"
 	"log"
-	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/enrichman/gocoverkube/internal/cli"
 
-	"github.com/lmittmann/tint"
 	"k8s.io/client-go/kubernetes"
 
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 func main() {
-	logger := slog.New(tint.NewHandler(os.Stderr, nil))
-
 	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 	if k, found := os.LookupEnv("KUBECONFIG"); found {
 		kubeconfig = k
@@ -39,6 +35,4 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
-	logger.Info("done")
 }

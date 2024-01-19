@@ -3,7 +3,6 @@ module github.com/enrichman/gocoverkube
 go 1.21.4
 
 require (
-	github.com/lmittmann/tint v1.0.3
 	github.com/spf13/cobra v1.8.0
 	k8s.io/api v0.24.17
 	k8s.io/apimachinery v0.24.17
@@ -13,10 +12,17 @@ require (
 )
 
 require (
+	github.com/fatih/color v1.7.0 // indirect
+	github.com/mattn/go-colorable v0.1.2 // indirect
+	github.com/mattn/go-isatty v0.0.8 // indirect
+)
+
+require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/briandowns/spinner v1.23.0
 	github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect

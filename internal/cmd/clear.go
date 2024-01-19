@@ -61,10 +61,7 @@ func clearDeployment(ctx context.Context, deploymentClient typedappsv1.Deploymen
 	podSpec.Volumes = unsetVolume(podSpec.Volumes)
 	deployment.Spec.Template.Spec = podSpec
 
-	fmt.Println(deployment.ResourceVersion)
 	deployment, err := deploymentClient.Update(ctx, deployment, metav1.UpdateOptions{})
-	fmt.Println(deployment.ResourceVersion)
-
 	return err
 }
 
