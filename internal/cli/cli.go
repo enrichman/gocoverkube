@@ -22,6 +22,7 @@ var Version = "0.0.0-dev"
 type RootCfg struct {
 	kubeconfig string
 	namespace  string
+	deployment string
 
 	client *kubernetes.Clientset
 	config *rest.Config
@@ -62,51 +63,68 @@ func NewRootCmd() *cobra.Command {
 
 	rootCmd.PersistentFlags().StringVar(&rootCfg.kubeconfig, "kubeconfig", rootCfg.kubeconfig, "kubeconfig [KUBECONFIG]")
 	rootCmd.PersistentFlags().StringVarP(&rootCfg.namespace, "namespace", "n", rootCfg.namespace, "namespace [NAMESPACE]")
+	rootCmd.PersistentFlags().StringVarP(&rootCfg.deployment, "deployment", "d", rootCfg.deployment, "deployment (DEPLOYMENT)")
 
 	return rootCmd
 }
 
 func NewInitCmd(rootCfg *RootCfg) *cobra.Command {
 	return &cobra.Command{
-		Use:          "init",
-		Short:        "init",
-		SilenceUsage: true,
-		Args:         cobra.ExactArgs(1),
-		PreRunE:      CheckConnectionPreRun(rootCfg),
+		Use:           "init",
+		Short:         "init",
+		SilenceErrors: true,
+		Args:          cobra.NoArgs,
+		PreRunE:       CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			deploymentName := args[0]
+			cmd.SilenceUsage = true
 
-			return gcmd.Init(cmd.Context(), rootCfg.client, rootCfg.namespace, deploymentName)
+			return gcmd.Init(
+				cmd.Context(),
+				rootCfg.client,
+				rootCfg.namespace,
+				rootCfg.deployment,
+			)
 		},
 	}
 }
 
 func NewCollectCmd(rootCfg *RootCfg) *cobra.Command {
 	return &cobra.Command{
-		Use:          "collect",
-		Short:        "collect",
-		SilenceUsage: true,
-		Args:         cobra.ExactArgs(1),
-		PreRunE:      CheckConnectionPreRun(rootCfg),
+		Use:           "collect",
+		Short:         "collect",
+		SilenceErrors: true,
+		Args:          cobra.NoArgs,
+		PreRunE:       CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			deploymentName := args[0]
+			cmd.SilenceUsage = true
 
-			return gcmd.Collect(cmd.Context(), rootCfg.client, rootCfg.config, rootCfg.namespace, deploymentName)
+			return gcmd.Collect(
+				cmd.Context(),
+				rootCfg.client,
+				rootCfg.config,
+				rootCfg.namespace,
+				rootCfg.deployment,
+			)
 		},
 	}
 }
 
 func NewClearCmd(rootCfg *RootCfg) *cobra.Command {
 	return &cobra.Command{
-		Use:          "clear",
-		Short:        "clear",
-		SilenceUsage: true,
-		Args:         cobra.ExactArgs(1),
-		PreRunE:      CheckConnectionPreRun(rootCfg),
+		Use:           "clear",
+		Short:         "clear",
+		SilenceErrors: true,
+		Args:          cobra.NoArgs,
+		PreRunE:       CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			deploymentName := args[0]
+			cmd.SilenceUsage = true
 
-			return gcmd.Clear(cmd.Context(), rootCfg.client, rootCfg.namespace, deploymentName)
+			return gcmd.Clear(
+				cmd.Context(),
+				rootCfg.client,
+				rootCfg.namespace,
+				rootCfg.deployment,
+			)
 		},
 	}
 }

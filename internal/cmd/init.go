@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	typedappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
@@ -37,15 +36,14 @@ func Init(ctx context.Context, clientset kubernetes.Interface, namespace, deploy
 	pvcClient := clientset.CoreV1().PersistentVolumeClaims(namespace)
 	err = claimPersistentVolume(ctx, pvcClient, storageClass)
 	if err != nil {
-		return err
+		if !k8serrors.IsAlreadyExists(err) {
+			return err
+		}
 	}
+	fmt.Println("✅ PVC created")
 
-	err = patchDeployment(ctx, deploymentClient, deployment)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	deployment = patchDeployment(ctx, deployment)
+	return updateAndRestartDeployment(ctx, clientset, namespace, deployment)
 }
 
 // getDefaultStorageClass will get the default storage class
@@ -90,17 +88,10 @@ func claimPersistentVolume(ctx context.Context, pvcClient typedcorev1.Persistent
 	}
 
 	_, err := pvcClient.Create(ctx, pvc, metav1.CreateOptions{})
-	if err != nil {
-		if !k8serrors.IsAlreadyExists(err) {
-			return err
-		}
-		fmt.Println(err)
-	}
-
-	return nil
+	return err
 }
 
-func patchDeployment(ctx context.Context, deploymentClient typedappsv1.DeploymentInterface, deployment *appsv1.Deployment) error {
+func patchDeployment(ctx context.Context, deployment *appsv1.Deployment) *appsv1.Deployment {
 	// update deployment
 	podSpec := deployment.Spec.Template.Spec
 
@@ -115,8 +106,7 @@ func patchDeployment(ctx context.Context, deploymentClient typedappsv1.Deploymen
 	podSpec.Volumes = setVolume(podSpec.Volumes)
 	deployment.Spec.Template.Spec = podSpec
 
-	_, err := deploymentClient.Update(ctx, deployment, metav1.UpdateOptions{})
-	return err
+	return deployment
 }
 
 func setEnvVar(env []v1.EnvVar) []v1.EnvVar {

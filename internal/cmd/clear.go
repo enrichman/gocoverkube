@@ -9,7 +9,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	typedappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 )
 
 // gocoverkube clear
@@ -20,18 +19,15 @@ func Clear(ctx context.Context, clientset kubernetes.Interface, namespace, deplo
 		return err
 	}
 
-	err = clearDeployment(ctx, deploymentClient, deployment)
+	deployment = clearDeployment(ctx, deployment)
+	err = updateAndRestartDeployment(ctx, clientset, namespace, deployment)
 	if err != nil {
 		return err
 	}
 
-	podClient := clientset.CoreV1().Pods(namespace)
-	err = podClient.Delete(ctx, collectorName, metav1.DeleteOptions{})
+	err = deleteCollectorPod(ctx, clientset, namespace)
 	if err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return err
-		}
-		fmt.Println(err)
+		return err
 	}
 
 	pvcClient := clientset.CoreV1().PersistentVolumeClaims(namespace)
@@ -40,13 +36,13 @@ func Clear(ctx context.Context, clientset kubernetes.Interface, namespace, deplo
 		if !k8serrors.IsNotFound(err) {
 			return err
 		}
-		fmt.Println(err)
 	}
+	fmt.Println("✅ PVC deleted")
 
 	return nil
 }
 
-func clearDeployment(ctx context.Context, deploymentClient typedappsv1.DeploymentInterface, deployment *appsv1.Deployment) error {
+func clearDeployment(ctx context.Context, deployment *appsv1.Deployment) *appsv1.Deployment {
 	// update deployment
 	podSpec := deployment.Spec.Template.Spec
 
@@ -61,8 +57,7 @@ func clearDeployment(ctx context.Context, deploymentClient typedappsv1.Deploymen
 	podSpec.Volumes = unsetVolume(podSpec.Volumes)
 	deployment.Spec.Template.Spec = podSpec
 
-	deployment, err := deploymentClient.Update(ctx, deployment, metav1.UpdateOptions{})
-	return err
+	return deployment
 }
 
 func unsetEnvVar(envVars []v1.EnvVar) []v1.EnvVar {
