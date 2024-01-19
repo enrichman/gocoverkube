@@ -21,7 +21,7 @@ const (
 )
 
 // gocoverkube collect
-func Collect(ctx context.Context, clientset kubernetes.Interface, config *rest.Config, namespace, deploymentName string) error {
+func Collect(ctx context.Context, clientset kubernetes.Interface, config *rest.Config, namespace, deploymentName, outDst string) error {
 	// TODO add timeout flag
 
 	deploymentClient := clientset.AppsV1().Deployments(namespace)
@@ -50,11 +50,12 @@ func Collect(ctx context.Context, clientset kubernetes.Interface, config *rest.C
 	}
 
 	podExec := NewPodExec(config, clientset)
-	// TODO: var destination
-	err = podExec.PodCopyFile(collectorName+":/tmp/coverage", "coverage", namespace)
+	err = podExec.PodCopyFile(collectorName+":/tmp/coverage", outDst, namespace)
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("ℹ️  Coverage collected at '%s'\n", outDst)
 
 	return nil
 }

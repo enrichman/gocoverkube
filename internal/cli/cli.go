@@ -93,10 +93,16 @@ func NewCollectCmd(rootCfg *RootCfg) *cobra.Command {
 		Use:           "collect",
 		Short:         "collect",
 		SilenceErrors: true,
-		Args:          cobra.NoArgs,
+		Args:          cobra.ExactArgs(1),
 		PreRunE:       CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
+
+			outDir := args[0]
+			err := validateOutputDir(outDir)
+			if err != nil {
+				return err
+			}
 
 			return gcmd.Collect(
 				cmd.Context(),
@@ -104,9 +110,32 @@ func NewCollectCmd(rootCfg *RootCfg) *cobra.Command {
 				rootCfg.config,
 				rootCfg.namespace,
 				rootCfg.deployment,
+				outDir,
 			)
 		},
 	}
+}
+
+func validateOutputDir(outDir string) error {
+	info, err := os.Stat(outDir)
+	// file exists
+	if err == nil {
+		// if it's not a dir return error
+		if !info.IsDir() {
+			return fmt.Errorf("output destination '%s' is not a directory", outDir)
+		}
+		return nil
+	}
+
+	// err was not nil, something happened
+
+	// if the dir didn't exists try to create it
+	if os.IsNotExist(err) {
+		return os.MkdirAll(outDir, os.ModePerm)
+	}
+
+	// something else happened
+	return err
 }
 
 func NewClearCmd(rootCfg *RootCfg) *cobra.Command {
