@@ -1,6 +1,8 @@
 
+VERSION=$(shell git describe --always)
+
 build:
-	CGO_ENABLED=0 go build github.com/enrichman/gocoverkube
+	CGO_ENABLED=0 go build -ldflags="-X 'github.com/enrichman/gocoverkube/internal/cli.Version=${VERSION}'"
 
 dev-setup: dev-cluster-create dev-sample-server-build dev-sample-server-deploy
 
