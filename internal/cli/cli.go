@@ -23,6 +23,7 @@ type RootCfg struct {
 	kubeconfig string
 	namespace  string
 	deployment string
+	pod        string
 
 	client *kubernetes.Clientset
 	config *rest.Config
@@ -64,6 +65,7 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&rootCfg.kubeconfig, "kubeconfig", rootCfg.kubeconfig, "kubeconfig [KUBECONFIG]")
 	rootCmd.PersistentFlags().StringVarP(&rootCfg.namespace, "namespace", "n", rootCfg.namespace, "namespace [NAMESPACE]")
 	rootCmd.PersistentFlags().StringVarP(&rootCfg.deployment, "deployment", "d", rootCfg.deployment, "deployment (DEPLOYMENT)")
+	rootCmd.PersistentFlags().StringVarP(&rootCfg.pod, "pod", "p", rootCfg.pod, "pod (POD)")
 
 	return rootCmd
 }
@@ -78,7 +80,18 @@ func NewInitCmd(rootCfg *RootCfg) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			return gcmd.Init(
+			// TODO validate deployment/pod
+
+			if rootCfg.pod != "" {
+				return gcmd.InitPod(
+					cmd.Context(),
+					rootCfg.client,
+					rootCfg.namespace,
+					rootCfg.pod,
+				)
+			}
+
+			return gcmd.InitDeployment(
 				cmd.Context(),
 				rootCfg.client,
 				rootCfg.namespace,

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -21,14 +20,42 @@ const (
 )
 
 // gocoverkube init
-func Init(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string) error {
-	storageClass, err := getDefaultStorageClass(ctx, clientset)
+func InitPod(ctx context.Context, clientset kubernetes.Interface, namespace, podName string) error {
+	// check if pod exists
+	podClient := clientset.CoreV1().Pods(namespace)
+	pod, err := podClient.Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
+	err = InitStorage(ctx, clientset, namespace)
+	if err != nil {
+		return err
+	}
+
+	pod.Spec = patchPodSpec(pod.Spec)
+	return deleteAndCreatePod(ctx, clientset, namespace, pod)
+}
+
+func InitDeployment(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string) error {
+	// check if deployment exists
 	deploymentClient := clientset.AppsV1().Deployments(namespace)
 	deployment, err := deploymentClient.Get(ctx, deploymentName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = InitStorage(ctx, clientset, namespace)
+	if err != nil {
+		return err
+	}
+
+	deployment.Spec.Template.Spec = patchPodSpec(deployment.Spec.Template.Spec)
+	return updateAndRestartDeployment(ctx, clientset, namespace, deployment)
+}
+
+func InitStorage(ctx context.Context, clientset kubernetes.Interface, namespace string) error {
+	storageClass, err := getDefaultStorageClass(ctx, clientset)
 	if err != nil {
 		return err
 	}
@@ -42,8 +69,7 @@ func Init(ctx context.Context, clientset kubernetes.Interface, namespace, deploy
 	}
 	fmt.Println("✅ PVC created")
 
-	deployment = patchDeployment(ctx, deployment)
-	return updateAndRestartDeployment(ctx, clientset, namespace, deployment)
+	return nil
 }
 
 // getDefaultStorageClass will get the default storage class
@@ -91,10 +117,7 @@ func claimPersistentVolume(ctx context.Context, pvcClient typedcorev1.Persistent
 	return err
 }
 
-func patchDeployment(ctx context.Context, deployment *appsv1.Deployment) *appsv1.Deployment {
-	// update deployment
-	podSpec := deployment.Spec.Template.Spec
-
+func patchPodSpec(podSpec v1.PodSpec) v1.PodSpec {
 	container := podSpec.Containers[0]
 	// add GOCOVERDIR env var
 	container.Env = setEnvVar(container.Env)
@@ -104,9 +127,8 @@ func patchDeployment(ctx context.Context, deployment *appsv1.Deployment) *appsv1
 
 	// bind /tmp/coverage volume to PVC
 	podSpec.Volumes = setVolume(podSpec.Volumes)
-	deployment.Spec.Template.Spec = podSpec
 
-	return deployment
+	return podSpec
 }
 
 func setEnvVar(env []v1.EnvVar) []v1.EnvVar {

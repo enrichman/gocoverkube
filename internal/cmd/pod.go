@@ -114,3 +114,71 @@ func deleteCollectorPod(
 
 	return nil
 }
+
+func deleteAndCreatePod(
+	ctx context.Context,
+	clientset kubernetes.Interface,
+	namespace string,
+	pod *v1.Pod,
+) error {
+	podClient := clientset.CoreV1().Pods(namespace)
+
+	s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
+	s.Suffix = " Deleting Pod"
+	s.Start()
+
+	start := time.Now()
+
+	err := podClient.Delete(ctx, pod.Name, metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+
+	for {
+		_, err := podClient.Get(ctx, pod.Name, metav1.GetOptions{})
+		if err != nil {
+			// pod was deleted
+			if k8serrors.IsNotFound(err) {
+				break
+			}
+			return err
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	s.Stop()
+
+	fmt.Printf("✅ Pod deleted [%v]\n", time.Since(start).Round(time.Second))
+
+	s.Suffix = " Creating Pod"
+	s.Start()
+
+	start = time.Now()
+
+	pod.ResourceVersion = ""
+
+	_, err = podClient.Create(ctx, pod, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	for {
+		pod, err := podClient.Get(ctx, pod.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if pod.Status.Phase == v1.PodRunning {
+			break
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	s.Stop()
+
+	fmt.Printf("✅ Pod created [%v]\n", time.Since(start).Round(time.Second))
+
+	return nil
+}
