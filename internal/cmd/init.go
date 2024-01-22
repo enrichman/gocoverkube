@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	// TODO fix for multiple PVCs
 	pvcName    = "gocoverkube-pvc"
 	volumeName = "gocoverkube-tmp-coverage"
 	mountPath  = "/tmp/coverage"
@@ -113,11 +114,21 @@ func claimPersistentVolume(ctx context.Context, pvcClient typedcorev1.Persistent
 		},
 	}
 
+	// TODO check if bug or needs node affinity
+	// if node != "" {
+	// 	pvc.ObjectMeta.Annotations = map[string]string{
+	// 		"volume.kubernetes.io/selected-node": node,
+	// 	}
+	// }
+
 	_, err := pvcClient.Create(ctx, pvc, metav1.CreateOptions{})
 	return err
 }
 
 func patchPodSpec(podSpec v1.PodSpec) v1.PodSpec {
+	// FIX for PVC hanging
+	podSpec.NodeName = ""
+
 	container := podSpec.Containers[0]
 	// add GOCOVERDIR env var
 	container.Env = setEnvVar(container.Env)

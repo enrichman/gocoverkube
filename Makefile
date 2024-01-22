@@ -7,7 +7,7 @@ build:
 dev-setup: dev-cluster-create dev-sample-server-build dev-sample-server-deploy
 
 dev-cluster-create:
-	k3d cluster create gocoverkube
+	k3d cluster create gocoverkube --agents 3
 	k3d kubeconfig merge -ad
 	kubectl config use-context k3d-gocoverkube
 
@@ -21,3 +21,4 @@ dev-sample-server-build:
 dev-sample-server-deploy:
 	k3d image import -c gocoverkube sample-server:local
 	kubectl apply -f ./tests/sample-server/deployment.yaml
+	kubectl apply -f ./tests/sample-server/pod.yaml

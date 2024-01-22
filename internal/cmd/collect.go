@@ -39,12 +39,51 @@ func Collect(ctx context.Context, clientset kubernetes.Interface, config *rest.C
 		return err
 	}
 
+	err = createCollectorPod(ctx, clientset, namespace)
+	if err != nil {
+		return err
+	}
+
 	err = updateAndRestartDeployment(ctx, clientset, namespace, deployment)
 	if err != nil {
 		return err
 	}
 
+	podExec := NewPodExec(config, clientset)
+	err = podExec.PodCopyFile(collectorName+":/tmp/coverage", outDst, namespace)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("ℹ️  Coverage collected at '%s'\n", outDst)
+
+	return nil
+}
+
+func CollectPod(ctx context.Context, clientset kubernetes.Interface, config *rest.Config, namespace, podName, outDst string) error {
+	// TODO add timeout flag
+
+	podClient := clientset.CoreV1().Pods(namespace)
+	pod, err := podClient.Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	pvcClient := clientset.CoreV1().PersistentVolumeClaims(namespace)
+	_, err = pvcClient.Get(ctx, pvcName, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return errors.New("PVC not found. Did you run 'init'?")
+		}
+		return err
+	}
+
 	err = createCollectorPod(ctx, clientset, namespace)
+	if err != nil {
+		return err
+	}
+
+	err = deleteAndCreatePod(ctx, clientset, namespace, pod)
 	if err != nil {
 		return err
 	}

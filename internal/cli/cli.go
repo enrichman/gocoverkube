@@ -117,6 +117,17 @@ func NewCollectCmd(rootCfg *RootCfg) *cobra.Command {
 				return err
 			}
 
+			if rootCfg.pod != "" {
+				return gcmd.CollectPod(
+					cmd.Context(),
+					rootCfg.client,
+					rootCfg.config,
+					rootCfg.namespace,
+					rootCfg.pod,
+					outDir,
+				)
+			}
+
 			return gcmd.Collect(
 				cmd.Context(),
 				rootCfg.client,
