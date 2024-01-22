@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,6 +45,11 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
+			err = validateConfig(rootCfg)
+			if err != nil {
+				return err
+			}
+
 			clientset, config, err := newKubernetesClient(rootCfg.kubeconfig)
 			if err != nil {
 				return err
@@ -51,6 +57,12 @@ func NewRootCmd() *cobra.Command {
 
 			rootCfg.client = clientset
 			rootCfg.config = config
+
+			_, err = gcmd.ServerVersion(clientset)
+			if err != nil {
+				return errors.New("error connecting to cluster")
+			}
+
 			return nil
 		},
 	}
@@ -76,11 +88,8 @@ func NewInitCmd(rootCfg *RootCfg) *cobra.Command {
 		Short:         "init",
 		SilenceErrors: true,
 		Args:          cobra.NoArgs,
-		PreRunE:       CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-
-			// TODO validate deployment/pod
 
 			if rootCfg.pod != "" {
 				return gcmd.InitPod(
@@ -107,7 +116,6 @@ func NewCollectCmd(rootCfg *RootCfg) *cobra.Command {
 		Short:         "collect",
 		SilenceErrors: true,
 		Args:          cobra.ExactArgs(1),
-		PreRunE:       CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
@@ -168,7 +176,6 @@ func NewClearCmd(rootCfg *RootCfg) *cobra.Command {
 		Short:         "clear",
 		SilenceErrors: true,
 		Args:          cobra.NoArgs,
-		PreRunE:       CheckConnectionPreRun(rootCfg),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
@@ -199,13 +206,6 @@ func NewVersionCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(Version)
 		},
-	}
-}
-
-func CheckConnectionPreRun(rootCfg *RootCfg) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		_, err := gcmd.ServerVersion(rootCfg.client)
-		return err
 	}
 }
 
@@ -248,4 +248,16 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 	})
 
 	return err
+}
+
+func validateConfig(cfg *RootCfg) error {
+	if cfg.pod == "" && cfg.deployment == "" {
+		return errors.New("one of '--deployment/-d' or '--pod/-p' flag needs to be specified")
+	}
+
+	if cfg.pod == "" && cfg.deployment == "" {
+		return errors.New("only one of '--deployment/-d' or '--pod/-p' flag needs to be specified")
+	}
+
+	return nil
 }
