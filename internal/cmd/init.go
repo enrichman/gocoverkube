@@ -34,6 +34,11 @@ func InitPod(ctx context.Context, clientset kubernetes.Interface, namespace, pod
 		return err
 	}
 
+	err = createCollectorPod(ctx, clientset, namespace)
+	if err != nil {
+		return err
+	}
+
 	pod.Spec = patchPodSpec(pod.Spec)
 	return deleteAndCreatePod(ctx, clientset, namespace, pod)
 }
@@ -47,6 +52,11 @@ func InitDeployment(ctx context.Context, clientset kubernetes.Interface, namespa
 	}
 
 	err = InitStorage(ctx, clientset, namespace)
+	if err != nil {
+		return err
+	}
+
+	err = createCollectorPod(ctx, clientset, namespace)
 	if err != nil {
 		return err
 	}
@@ -126,7 +136,7 @@ func claimPersistentVolume(ctx context.Context, pvcClient typedcorev1.Persistent
 }
 
 func patchPodSpec(podSpec v1.PodSpec) v1.PodSpec {
-	// FIX for PVC hanging
+	// FIX for PVC hanging during pod recreation
 	podSpec.NodeName = ""
 
 	container := podSpec.Containers[0]

@@ -172,7 +172,16 @@ func NewClearCmd(rootCfg *RootCfg) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			return gcmd.Clear(
+			if rootCfg.pod != "" {
+				return gcmd.ClearPod(
+					cmd.Context(),
+					rootCfg.client,
+					rootCfg.namespace,
+					rootCfg.pod,
+				)
+			}
+
+			return gcmd.ClearDeployment(
 				cmd.Context(),
 				rootCfg.client,
 				rootCfg.namespace,

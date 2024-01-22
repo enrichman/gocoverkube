@@ -39,11 +39,6 @@ func Collect(ctx context.Context, clientset kubernetes.Interface, config *rest.C
 		return err
 	}
 
-	err = createCollectorPod(ctx, clientset, namespace)
-	if err != nil {
-		return err
-	}
-
 	err = updateAndRestartDeployment(ctx, clientset, namespace, deployment)
 	if err != nil {
 		return err
@@ -75,11 +70,6 @@ func CollectPod(ctx context.Context, clientset kubernetes.Interface, config *res
 		if k8serrors.IsNotFound(err) {
 			return errors.New("PVC not found. Did you run 'init'?")
 		}
-		return err
-	}
-
-	err = createCollectorPod(ctx, clientset, namespace)
-	if err != nil {
 		return err
 	}
 

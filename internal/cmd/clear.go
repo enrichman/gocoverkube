@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,14 +11,45 @@ import (
 )
 
 // gocoverkube clear
-func Clear(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string) error {
+func ClearPod(ctx context.Context, clientset kubernetes.Interface, namespace, podName string) error {
+	podClient := clientset.CoreV1().Pods(namespace)
+	pod, err := podClient.Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	pod.Spec = clearPodSpec(ctx, pod.Spec)
+	err = deleteAndCreatePod(ctx, clientset, namespace, pod)
+	if err != nil {
+		return err
+	}
+
+	err = deleteCollectorPod(ctx, clientset, namespace)
+	if err != nil {
+		return err
+	}
+
+	pvcClient := clientset.CoreV1().PersistentVolumeClaims(namespace)
+	err = pvcClient.Delete(ctx, pvcName, metav1.DeleteOptions{})
+	if err != nil {
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+	fmt.Println("✅ PVC deleted")
+
+	return nil
+}
+
+// gocoverkube clear
+func ClearDeployment(ctx context.Context, clientset kubernetes.Interface, namespace, deploymentName string) error {
 	deploymentClient := clientset.AppsV1().Deployments(namespace)
 	deployment, err := deploymentClient.Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	deployment = clearDeployment(ctx, deployment)
+	deployment.Spec.Template.Spec = clearPodSpec(ctx, deployment.Spec.Template.Spec)
 	err = updateAndRestartDeployment(ctx, clientset, namespace, deployment)
 	if err != nil {
 		return err
@@ -42,10 +72,7 @@ func Clear(ctx context.Context, clientset kubernetes.Interface, namespace, deplo
 	return nil
 }
 
-func clearDeployment(ctx context.Context, deployment *appsv1.Deployment) *appsv1.Deployment {
-	// update deployment
-	podSpec := deployment.Spec.Template.Spec
-
+func clearPodSpec(ctx context.Context, podSpec v1.PodSpec) v1.PodSpec {
 	container := podSpec.Containers[0]
 	// unset GOCOVERDIR env var
 	container.Env = unsetEnvVar(container.Env)
@@ -55,9 +82,8 @@ func clearDeployment(ctx context.Context, deployment *appsv1.Deployment) *appsv1
 
 	// unbind /tmp/coverage volume to PVC
 	podSpec.Volumes = unsetVolume(podSpec.Volumes)
-	deployment.Spec.Template.Spec = podSpec
 
-	return deployment
+	return podSpec
 }
 
 func unsetEnvVar(envVars []v1.EnvVar) []v1.EnvVar {
