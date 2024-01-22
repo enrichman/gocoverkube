@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sample-server
+spec:
+  containers:
+  - image: "sample-server:local"
+    name: sample-server
